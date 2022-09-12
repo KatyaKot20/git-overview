@@ -1,0 +1,67 @@
+#include <Windows.h>  // библиотека для работы с windows
+#include <stdio.h> // стандартный заголовочный файл ввода-вывода
+#include <string> // библиотека для работы со строками
+
+#define ROW_COUNT 4 // кол-во строк по заданию
+
+using namespace std;
+
+int main(int argc, char* argv[]) { //Аргументы командной строки 
+
+	HANDLE pam1, pam2; // создаем дескриптор с помощью которого ссылаемся на наши файлы
+	int lineCount;
+	int lineNumbers[ROW_COUNT];
+	char* inputFileName, * outputFileName; // имена файлов
+	
+	lineCount = atoi(argv[1]);
+//  Заполняем массив данными из аргумента
+	for (int i = 0; i < ROW_COUNT; i++)
+		lineNumbers[i] = atoi(argv[i + 2]);
+
+	inputFileName = argv[6];
+	outputFileName = argv[7];
+                           имя файла  тип доступа(чтение)          
+	pam1 = CreateFileA(inputFileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	pam2 = CreateFileA(outputFileName, GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+ //Ставим указатель в нужное нам положение
+	SetFilePointer(pam2, 0, NULL, FILE_END); // перемещение указателя файла в начало или в конец 
+
+  //Создаем переменные для работы с ReadFile и WriteFile
+	char currentByte;
+	int currentLineNumber = 1;
+	DWORD numberOfBytes;
+	string result;
+
+	while (ReadFile(pam1, &currentByte, 1, &numberOfBytes, NULL) > 0 && numberOfBytes > 0) // чтение файла{
+//Перебираем элементы нашего массива
+		for (int i = 0; i < ROW_COUNT; i++) {
+//Проверяем находимся ли мы на нужной строке
+			if (lineNumbers[i] == currentLineNumber) {
+  //Записывем результат в переменую result
+				result += currentByte;
+//Выходим из цикла
+				break;
+			}
+		}
+ //Делаем проверка на кол-во байт
+		if (currentByte == 10) {
+//В случае нехватки добавляем доп.строку
+			currentLineNumber++;
+//Если наша строка не пустая, то добавляем элементы пер. result в файл pam2.txt
+			if (result.size()) {
+				puts(result.c_str());
+
+				WriteFile(pam2, result.c_str(), result.size(), NULL, NULL); // запись в файл
+				result.clear();
+			}
+		}
+	}
+
+	BOOL res = SetFileAttributesA(outputFileName, FILE_ATTRIBUTE_ENCRYPTED | FILE_ATTRIBUTE_ARCHIVE); // установка атрибутов файла ( архивный, зашифрованный)
+
+	CloseHandle(pam1);
+	CloseHandle(pam2);
+
+	return 0;
+}
